@@ -160,7 +160,7 @@ function _wp_translate_postdata( $update = false, $post_data = null ) {
 		$post_data['post_date'] = sprintf( "%04d-%02d-%02d %02d:%02d:%02d", $aa, $mm, $jj, $hh, $mn, $ss );
 		$valid_date = wp_checkdate( $mm, $jj, $aa, $post_data['post_date'] );
 		if ( !$valid_date ) {
-			return new WP_Error( 'invalid_date', __( 'Whoops, the provided date is invalid.' ) );
+			return new WP_Error( 'invalid_date', __( 'Invalid date.' ) );
 		}
 		$post_data['post_date_gmt'] = get_gmt_from_date( $post_data['post_date'] );
 	}
@@ -1152,33 +1152,6 @@ function wp_edit_attachments_query_vars( $q = false ) {
 	}
 
 	return $q;
-}
-
-/**
- * Filter the SQL clauses of an attachment query to include filenames.
- *
- * @since 4.7.0
- * @access private
- *
- * @param array $clauses An array including WHERE, GROUP BY, JOIN, ORDER BY,
- *                       DISTINCT, fields (SELECT), and LIMITS clauses.
- * @return array The modified clauses.
- */
-function _filter_query_attachment_filenames( $clauses ) {
-	global $wpdb;
-	remove_filter( 'posts_clauses', __FUNCTION__ );
-
-	// Add a LEFT JOIN of the postmeta table so we don't trample existing JOINs.
-	$clauses['join'] .= " LEFT JOIN {$wpdb->postmeta} AS sq1 ON ( {$wpdb->posts}.ID = sq1.post_id AND sq1.meta_key = '_wp_attached_file' )";
-
-	$clauses['groupby'] = "{$wpdb->posts}.ID";
-
-	$clauses['where'] = preg_replace(
-		"/\({$wpdb->posts}.post_content (NOT LIKE|LIKE) (\'[^']+\')\)/",
-		"$0 OR ( sq1.meta_value $1 $2 )",
-		$clauses['where'] );
-
-	return $clauses;
 }
 
 /**

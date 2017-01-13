@@ -103,53 +103,55 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 		/**
 		 * Create and show the edit shortcut for a given partial placement container.
 		 *
-		 * @since 4.7
+		 * @since 4.7.0
+		 * @access public
 		 *
 		 * @param {Placement} placement The placement container element.
 		 * @returns {void}
 		 */
 		createEditShortcutForPlacement: function( placement ) {
-			var partial = this, $shortcut, $placementContainer;
+			var partial = this, $shortcut, $placementContainer, illegalAncestorSelector, illegalContainerSelector;
 			if ( ! placement.container ) {
 				return;
 			}
 			$placementContainer = $( placement.container );
-			if ( ! $placementContainer.length ) {
+			illegalAncestorSelector = 'head';
+			illegalContainerSelector = 'area, audio, base, bdi, bdo, br, button, canvas, col, colgroup, command, datalist, embed, head, hr, html, iframe, img, input, keygen, label, link, map, math, menu, meta, noscript, object, optgroup, option, param, progress, rp, rt, ruby, script, select, source, style, svg, table, tbody, textarea, tfoot, thead, title, tr, track, video, wbr';
+			if ( ! $placementContainer.length || $placementContainer.is( illegalContainerSelector ) || $placementContainer.closest( illegalAncestorSelector ).length ) {
 				return;
 			}
 			$shortcut = partial.createEditShortcut();
-			partial.positionEditShortcut( placement, $shortcut );
 			$shortcut.on( 'click', function( event ) {
 				event.preventDefault();
 				event.stopPropagation();
 				partial.showControl();
 			} );
+			partial.addEditShortcutToPlacement( placement, $shortcut );
 		},
 
 		/**
-		 * Position an edit shortcut for the placement container.
+		 * Add an edit shortcut to the placement container.
 		 *
-		 * The shortcut must already be created and added to the page.
-		 *
-		 * @since 4.7
+		 * @since 4.7.0
+		 * @access public
 		 *
 		 * @param {Placement} placement The placement for the partial.
 		 * @param {jQuery} $editShortcut The shortcut element as a jQuery object.
 		 * @returns {void}
 		 */
-		positionEditShortcut: function( placement, $editShortcut ) {
+		addEditShortcutToPlacement: function( placement, $editShortcut ) {
 			var $placementContainer = $( placement.container );
 			$placementContainer.prepend( $editShortcut );
 			if ( ! $placementContainer.is( ':visible' ) || 'none' === $placementContainer.css( 'display' ) ) {
 				$editShortcut.addClass( 'customize-partial-edit-shortcut-hidden' );
 			}
-			$editShortcut.toggleClass( 'customize-partial-edit-shortcut-left-margin', $editShortcut.offset().left < 1 );
 		},
 
 		/**
 		 * Return the unique class name for the edit shortcut button for this partial.
 		 *
-		 * @since 4.7
+		 * @since 4.7.0
+		 * @access public
 		 *
 		 * @return {string} Partial ID converted into a class name for use in shortcut.
 		 */
@@ -162,7 +164,8 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 		/**
 		 * Return the appropriate translated string for the edit shortcut button.
 		 *
-		 * @since 4.7
+		 * @since 4.7.0
+		 * @access public
 		 *
 		 * @return {string} Tooltip for edit shortcut.
 		 */
@@ -187,7 +190,8 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 		 *
 		 * Will use `params.type` if set, but otherwise will try to infer type from settingId.
 		 *
-		 * @since 4.7
+		 * @since 4.7.0
+		 * @access public
 		 *
 		 * @return {string} Type of partial derived from type param or the related setting ID.
 		 */
@@ -209,19 +213,26 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 		/**
 		 * Create an edit shortcut button for this partial.
 		 *
-		 * @since 4.7
+		 * @since 4.7.0
+		 * @access public
 		 *
 		 * @return {jQuery} The edit shortcut button element.
 		 */
 		createEditShortcut: function() {
-			var partial = this, shortcutTitle;
+			var partial = this, shortcutTitle, $buttonContainer, $button, $image;
 			shortcutTitle = partial.getEditShortcutTitle();
-			return $( '<button>', {
-				'aria-label': shortcutTitle,
-				'title': shortcutTitle,
-				'type': 'button',
+			$buttonContainer = $( '<span>', {
 				'class': 'customize-partial-edit-shortcut ' + partial.getEditShortcutClassName()
 			} );
+			$button = $( '<button>', {
+				'aria-label': shortcutTitle,
+				'title': shortcutTitle,
+				'class': 'customize-partial-edit-shortcut-button'
+			} );
+			$image = $( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M13.89 3.39l2.71 2.72c.46.46.42 1.24.03 1.64l-8.01 8.02-5.56 1.16 1.16-5.58s7.6-7.63 7.99-8.03c.39-.39 1.22-.39 1.68.07zm-2.73 2.79l-5.59 5.61 1.11 1.11 5.54-5.65zm-2.97 8.23l5.58-5.6-1.07-1.08-5.59 5.6z"/></svg>' );
+			$button.append( $image );
+			$buttonContainer.append( $button );
+			return $buttonContainer;
 		},
 
 		/**
@@ -301,14 +312,15 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 		 * @since 4.5.0
 		 */
 		showControl: function() {
-			var partial = this, settingId = partial.params.primarySetting, menuSlug;
+			var partial = this, settingId = partial.params.primarySetting;
 			if ( ! settingId ) {
 				settingId = _.first( partial.settings() );
 			}
 			if ( partial.getType() === 'nav_menu' ) {
-				menuSlug = partial.params.navMenuArgs.theme_location;
-				if ( menuSlug ) {
-					settingId = 'nav_menu_locations[' + menuSlug + ']';
+				if ( partial.params.navMenuArgs.theme_location ) {
+					settingId = 'nav_menu_locations[' + partial.params.navMenuArgs.theme_location + ']';
+				} else if ( partial.params.navMenuArgs.menu )   {
+					settingId = 'nav_menu[' + String( partial.params.navMenuArgs.menu ) + ']';
 				}
 			}
 			api.preview.send( 'focus-control-for-setting', settingId );
@@ -996,22 +1008,9 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 			shouldAnimateHide = ( 'hidden' === visibility && body.hasClass( 'customize-partial-edit-shortcuts-shown' ) && ! body.hasClass( 'customize-partial-edit-shortcuts-hidden' ) );
 			body.toggleClass( 'customize-partial-edit-shortcuts-hidden', shouldAnimateHide );
 			body.toggleClass( 'customize-partial-edit-shortcuts-shown', 'visible' === visibility );
-			body.toggleClass( 'customize-partial-edit-shortcuts-flash', 'initial' === visibility );
 		} );
 
 		api.preview.bind( 'active', function() {
-			var body = $( document.body ), buttonText, $editShortcutVisibilityButton;
-
-			// Add invisible button to toggle editShortcutVisibility.
-			if ( $( '.edit-shortcut-visibility-button' ).length < 1 ) {
-				buttonText = self.data.l10n.editShortcutVisibilityToggle || 'Toggle edit shortcuts';
-				$editShortcutVisibilityButton = $( '<button type="button" class="edit-shortcut-visibility-button screen-reader-text"></button>' );
-				$editShortcutVisibilityButton.text( buttonText );
-				$editShortcutVisibilityButton.on( 'click', function() {
-					api.selectiveRefresh.editShortcutVisibility.set( 'visible' === api.selectiveRefresh.editShortcutVisibility.get() ? 'hidden' : 'visible' );
-				} );
-				body.prepend( $editShortcutVisibilityButton );
-			}
 
 			// Make all partials ready.
 			self.partial.each( function( partial ) {
@@ -1021,14 +1020,6 @@ wp.customize.selectiveRefresh = ( function( $, api ) {
 			// Make all partials added henceforth as ready upon add.
 			self.partial.bind( 'add', function( partial ) {
 				partial.deferred.ready.resolve();
-			} );
-
-			body.on( 'click', function( event ) {
-				if ( event.shiftKey || $( event.target ).is( '.customize-partial-edit-shortcut, :input, button *, a[href], a[href] *, object, object *, [tabindex], [tabindex] *' ) ) {
-					return; // Don't toggle shortcuts on shift-clicks or clicks on (or in) interactive elements.
-				}
-				api.selectiveRefresh.editShortcutVisibility.set( 'visible' === api.selectiveRefresh.editShortcutVisibility.get() ? 'hidden' : 'visible' );
-				api.preview.send( 'edit-shortcut-visibility', api.selectiveRefresh.editShortcutVisibility.get() );
 			} );
 		} );
 
